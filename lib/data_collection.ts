@@ -1,13 +1,18 @@
-import {aws_ec2 as ec2, aws_iam, aws_secretsmanager, aws_sns, Duration} from 'aws-cdk-lib';
+import {
+    aws_ec2 as ec2,
+    aws_iam as iam,
+    aws_lambda as lambda,
+    aws_rds as rds,
+    aws_sns as sns,
+    aws_sqs as sqs,
+    aws_ssm as ssm,
+    custom_resources as custom,
+    Duration
+} from 'aws-cdk-lib';
 import {Construct} from "constructs";
-import { aws_rds as rds } from "aws-cdk-lib";
-import { aws_sqs as sqs} from "aws-cdk-lib";
-import { aws_lambda as lambda } from "aws-cdk-lib";
-import { aws_iam as iam } from "aws-cdk-lib";
-import { aws_sns as sns } from "aws-cdk-lib";
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import { aws_ssm as ssm } from "aws-cdk-lib";
-import { getLambdaCodePath } from './utils'
+import {getLambdaCodePath} from './utils'
+import {RetentionDays} from "aws-cdk-lib/aws-logs";
 
 export class DataCollectionBuild extends Construct {
     dbWriterFnModuleName: string;
@@ -31,11 +36,6 @@ export class DataCollectionBuild extends Construct {
                     cidrMask: 24,
                     name: 'Private',
                     subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-                },
-                {
-                    cidrMask: 24,
-                    name: 'PrivateWithEgress',
-                    subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
                 },
             ],
         });
@@ -96,9 +96,9 @@ export class DataCollectionBuild extends Construct {
             architecture: lambda.Architecture.ARM_64,
             vpc: this.vpc,
             vpcSubnets: this.vpc.selectSubnets({
-                subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
             }),
-            securityGroups: [dbWriterSecGrp]
+            securityGroups: [dbWriterSecGrp],
             },
         );
 
@@ -106,5 +106,31 @@ export class DataCollectionBuild extends Construct {
             actions: ['ssm:GetParameter',],
             resources: [ssm_key.parameterArn]
         }));
+
+        const dbInitializerFn = new lambda.DockerImageFunction(this, 'DBInitializerFn', {
+            description: 'Creates table in db upon deployment then self deletes',
+            code: lambda.DockerImageCode.fromImageAsset(
+                getLambdaCodePath('dbInitializerFn')
+            ),
+            environment: {'DB_CREDENTIALS': ssm_key.parameterName},
+            architecture: lambda.Architecture.ARM_64,
+            vpc: this.vpc,
+            vpcSubnets: this.vpc.selectSubnets({
+                subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+            }),
+            securityGroups: [dbWriterSecGrp],
+            role: dbWriterFn.role // should probably give the function its own role
+        });
+
+        const provider = new custom.Provider(this, 'CustomeResourceProvider-Initializer', {
+            onEventHandler: dbInitializerFn,
+            logRetention: RetentionDays.ONE_DAY
+        });
+        new custom.AwsCustomResource(this, 'CustomResource-Initializer', {
+            onCreate: {
+                service: dbInitializerFn.functionName,
+                action: 'InvokeFunction'
+            }
+        })
     }
 }
