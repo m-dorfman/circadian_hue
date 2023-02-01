@@ -21,6 +21,7 @@ using AWS CDK V2 for TypeScript.
 
 ## How to deploy
 
+Some lambda functions employ Docker to install necessary dependencies so make sure to `dockerd`
 This is a standalone app and can be deployed using normal CDK commands:
 
 in `cdk.json` the following context variables are set:

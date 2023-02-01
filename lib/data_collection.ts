@@ -2,6 +2,7 @@ import {
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_lambda as lambda,
+    aws_lambda_event_sources as eventSource,
     aws_rds as rds,
     aws_sns as sns,
     aws_sqs as sqs,
@@ -103,8 +104,16 @@ export class DataCollectionBuild extends Construct {
         );
 
         dbWriterFn.addToRolePolicy(new iam.PolicyStatement({
+            actions:['sqs:ReceiveMessage', 'sqs:DeleteMessage', 'sqs:GetQueueUrl'],
+            resources:[this.queue.queueArn,]
+        }));
+
+        const sqsInvoke = new eventSource.SqsEventSource(this.queue);
+        dbWriterFn.addEventSource(sqsInvoke);
+
+        dbWriterFn.addToRolePolicy(new iam.PolicyStatement({
             actions: ['ssm:GetParameter',],
-            resources: [ssm_key.parameterArn]
+            resources: [ssm_key.parameterArn,]
         }));
 
         const dbInitializerFn = new lambda.DockerImageFunction(this, 'DBInitializerFn', {
@@ -129,8 +138,12 @@ export class DataCollectionBuild extends Construct {
         new custom.AwsCustomResource(this, 'CustomResource-Initializer', {
             onCreate: {
                 service: dbInitializerFn.functionName,
-                action: 'InvokeFunction'
-            }
+                action: 'InvokeFunction',
+                physicalResourceId: {
+                    id: 'invocation upon creation'
+                }
+            },
+            role: dbWriterFn.role
         })
     }
 }
