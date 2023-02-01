@@ -21,20 +21,30 @@ using AWS CDK V2 for TypeScript.
 
 ## How to deploy
 
-Some lambda functions employ Docker to install necessary dependencies so make sure to `dockerd`
-This is a standalone app and can be deployed using normal CDK commands:
+1. Get access to the Hue Bridge by generating a key. Hit the button on the bridge and send the following POST:
+```
+https://<bridge ip address>/api
 
-in `cdk.json` the following context variables are set:
+{"devicetype":"<app_name>#<instance_name>", "generateclientkey":true}
+```
+2. Configure your router to port forward from some available port to 443.
+   *The bridge supports HTTPS traffic but might be better to authenticate first using Ngnix.
 
-| Key               | Function                                                                          |
-|-------------------|-----------------------------------------------------------------------------------|
-| `hueAddress`      | Address of the Bridge to forward control requests                                 |
-| `hueApiKey`       | Authentication key distributed by the Bridge                                      |
-| `lightGroup`      | Identifier representing a group of lights recognized by the bridge                |
-| `lambdaFunctions` | Object contraining functions to deploy with optional function for data collection |
+3. Some lambda functions employ Docker to install necessary dependencies so make sure to `dockerd`
 
-Including `dbWriteFn` in the `lambdaFunction` object sets a flag in the main stack to deploy the data collection
+4. in `cdk.json` the following context variables are set:
+
+| Key               | Function                                                                            |
+|-------------------|-------------------------------------------------------------------------------------|
+| `hueAddress`      | Address of the Bridge to forward control requests, ie `<your_ip>:port`              |
+| `hueApiKey`       | Authentication key distributed by the Bridge                                        |
+| `lightGroup`      | Identifier representing a group of lights recognized by the bridge                  |
+| `lambdaFunctions` | Object contraining functions to deploy with optional function for data collection   |
+
+Including `"dbWriteFnModuleName":"dbWriterFn` in the `lambdaFunction` object sets a flag in the main stack to deploy the data collection
 function and associated components.
+
+5. Deploy using normal cdk commands, `cdk bootstrap`, `cdk synth`, `cdk deploy`
 
 ## How temperature values are calculated
 
