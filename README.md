@@ -1,5 +1,7 @@
 # Circadian Rhythm in The Cloud
 
+## Light and how it affects us
+
 Melanopsin(subfamily of the Opsin proteins) is a photosensitive protein found in mammalian retina. 
 When light contacts the human eyes, melanopsin reacts according to the presence of blue light, 
 with peak light absorption at 480nm. As light absorption of melanopsin is increased, 
@@ -34,15 +36,15 @@ https://<bridge ip address>/api
 
 4. in `cdk.json` the following context variables are set:
 
-| Key               | Function                                                                            |
-|-------------------|-------------------------------------------------------------------------------------|
-| `hueAddress`      | Address of the Bridge to forward control requests, ie `<your_ip>:port`              |
-| `hueApiKey`       | Authentication key distributed by the Bridge                                        |
-| `lightGroup`      | Identifier representing a group of lights recognized by the bridge                  |
-| `lambdaFunctions` | Object contraining functions to deploy with optional function for data collection   |
+| Key               | Function                                                                           |
+|-------------------|------------------------------------------------------------------------------------|
+| `hueAddress`      | Address of the Bridge to forward control requests, ie `<your_ip>:port`             |
+| `hueApiKey`       | Authentication key distributed by the Bridge                                       |
+| `lightGroup`      | Identifier representing a group of lights recognized by the bridge                 |
+| `lambdaFunctions` | Object containing functions to deploy with optional function for data collection   |
 
-Including `"dbWriteFnModuleName":"dbWriterFn` in the `lambdaFunction` object sets a flag in the main stack to deploy the data collection
-function and associated components.
+Including `"dbWriteFnModuleName":"dbWriterFn"` in the `lambdaFunction` object sets a flag in the main stack to deploy 
+the data collection function and associated components.
 
 5. Deploy using normal cdk commands, `cdk bootstrap`, `cdk synth`, `cdk deploy`
 
@@ -50,7 +52,7 @@ function and associated components.
 
 Considering the spin of the world traces a circle, we can likely expect that the sun relative to us
 moves in a sinusoidal fashion.
-From this, we can expect that the greatest slope (change in sun's level) at the start and end of the day.
+From this, we can expect the greatest slope (change in sun's level) at the start and end of the day.
 I don't want to exactly mimic this because maybe I'd like to wake up a bit more rapidly than the sun allows,
 or have a slightly longer day with a more rapid sundown than the current season would allow. 
 I'd like to get somewhat close though.
@@ -120,7 +122,7 @@ insert into a table on a Postgres RDS instance. The function is invoked by SQS a
 If the function fails to write messages the message will remain in the queue.
 If messages older than an hour are read, an SNS notification will be sent out.
 
-For Python to communicate with the DB, psycopg is needed, the function is deployed containerized to install the dependencies
+For Python to communicate with the Postgres DB, the psycopg library is needed so the function is deployed containerized to install the dependencies
 as it is not available by default in Lambda's runtime.
 
 Not included in the diagram is an initializing lambda function. This function will create a table in the DB upon deployment
