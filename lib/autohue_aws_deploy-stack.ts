@@ -73,7 +73,7 @@ export class AutoHueAwsDeployStack extends cdk.Stack {
         resources: [dataCollection.queue.queueArn,]
       }));
       updaterFn.addEnvironment(
-          "WRITE_QUEUE_NAME", dataCollection.queue.queueName
+          "WRITE_QUEUE_NAME", dataCollection.queue.queueUrl
     );
     }
     else {

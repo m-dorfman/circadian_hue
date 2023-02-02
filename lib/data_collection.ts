@@ -93,7 +93,10 @@ export class DataCollectionBuild extends Construct {
             code: lambda.DockerImageCode.fromImageAsset(
                 getLambdaCodePath(this.dbWriterFnModuleName)
             ),
-            environment: {'DB_CREDENTIALS': ssm_key.parameterName},
+            environment: {
+                'DB_CREDENTIALS': ssm_key.parameterName,
+                'WRITE_QUEUE_URL': this.queue.queueName,
+            },
             architecture: lambda.Architecture.ARM_64,
             vpc: this.vpc,
             vpcSubnets: this.vpc.selectSubnets({
